@@ -225,8 +225,8 @@ public final class QueleaProperties extends Properties {
         return Double.parseDouble(getProperty(mainDivposKey, "-1"));
     }
 
-    public String getElevantoClientId() {
-        return getProperty(elevantoClientIdKey, "91955");
+    public String getElvantoClientId() {
+        return getProperty(elvantoClientIdKey, "91955");
     }
 
     /**

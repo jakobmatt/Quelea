@@ -6,7 +6,7 @@ public class QueleaPropertyKeys {
     public static final String videoTabKey = "video.tab";
     public static final String sceneInfoKey = "scene.info";
     public static final String mainDivposKey = "main.divpos";
-    public static final String elevantoClientIdKey = "elevanto.client.id";
+    public static final String elvantoClientIdKey = "elvanto.client.id";
     public static final String libraryDivposKey = "library.divpos";
     public static final String preliveDivposKey = "prelive.divpos";
     public static final String canvasDivposKey = "canvas.divpos";

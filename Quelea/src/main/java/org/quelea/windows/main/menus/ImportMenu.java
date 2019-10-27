@@ -49,7 +49,7 @@ import org.quelea.services.importexport.VideoPsalmImportDialog;
 import org.quelea.services.importexport.ZWTurboDBChecker;
 import org.quelea.services.importexport.ZionWorxImportDialog;
 import org.quelea.services.importexport.PlanningCenterOnlineImportDialog;
-import org.quelea.services.importexport.ElevantoImportDialog;
+import org.quelea.services.importexport.ElvantoImportDialog;
 import org.quelea.services.importexport.ProPresenterImportDialog;
 import org.quelea.services.importexport.ScreenMonkeyImportDialog;
 import org.quelea.services.importexport.WorshipHimImportDialog;
@@ -87,7 +87,7 @@ public class ImportMenu extends Menu {
     private final ImportDialog screenMonkeyImportDialog;
     private final ImportDialog sofImportDialog;
     private final PlanningCenterOnlineImportDialog planningCenterOnlineImportDialog;
-    private final ElevantoImportDialog elevantoImportDialog;
+    private final ElvantoImportDialog elvantoImportDialog;
     private final MenuItem qspItem;
     private final MenuItem osItem;
     private final MenuItem mpItem;
@@ -112,7 +112,7 @@ public class ImportMenu extends Menu {
     private final MenuItem vsItem;
     private final MenuItem epicWorshipItem;
     private final MenuItem pcoItem;
-    private final MenuItem elevantoItem;
+    private final MenuItem elvantoItem;
 
     /**
      * Create the import menu.
@@ -144,7 +144,7 @@ public class ImportMenu extends Menu {
         screenMonkeyImportDialog = new ScreenMonkeyImportDialog();
         sofImportDialog = new SoFImportDialog();
         planningCenterOnlineImportDialog = new PlanningCenterOnlineImportDialog();
-        elevantoImportDialog = new ElevantoImportDialog();
+        elvantoImportDialog = new ElvantoImportDialog();
 
         qspItem = new MenuItem(LabelGrabber.INSTANCE.getLabel("qsp.button"), new ImageView(new Image("file:icons/logo16.png", 16, 16, false, true)));
         qspItem.setOnAction((ActionEvent t) -> {
@@ -168,12 +168,12 @@ public class ImportMenu extends Menu {
         });
         pcoItem.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN));
         
-        // elevanto
-        elevantoItem = new MenuItem(LabelGrabber.INSTANCE.getLabel("elevanto.button"), new ImageView(new Image("file:icons/elevanto.png", 16, 16, false, true)));
-        elevantoItem.setOnAction((ActionEvent t) -> {
-            elevantoImportDialog.start();
+        // elvanto
+        elvantoItem = new MenuItem(LabelGrabber.INSTANCE.getLabel("elvanto.button"), new ImageView(new Image("file:icons/elvanto.png", 16, 16, false, true)));
+        elvantoItem.setOnAction((ActionEvent t) -> {
+            elvantoImportDialog.start();
         });
-        elevantoItem.setAccelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN));
+        elvantoItem.setAccelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN));
 
         olpItem = new MenuItem(LabelGrabber.INSTANCE.getLabel("olp.button"), new ImageView(new Image("file:icons/openlp.png", 16, 16, false, true)));
         olpItem.setOnAction((ActionEvent t) -> {
@@ -280,7 +280,7 @@ public class ImportMenu extends Menu {
 
         getItems().add(easySlidesItem);
         getItems().add(easyWorshipItem);
-        getItems().add(elevantoItem);
+        getItems().add(elvantoItem);
         getItems().add(epicWorshipItem);
         getItems().add(freeWorshipItem);
         getItems().add(mediaShoutItem);
