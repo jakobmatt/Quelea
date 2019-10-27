@@ -203,10 +203,21 @@ public class ElvantoImportDialog extends Stage {
                 }
                 catch (Exception e) {
                     // no plans
-                    continue;
+                    plans = null;
+                }
+
+                JSONObject files;
+                JSONArray filesArray = null;
+                try {
+                    files = (JSONObject)service.get("files");
+                    filesArray = (JSONArray)files.get("file");
+                }
+                catch (Exception e) {
+                    files = null;
+                    filesArray = null;
                 }
                 
-                if (plans == null) {
+                if ((plans == null) && (files == null)) {
                     continue;
                 }
                 JSONArray servicePlanArray = (JSONArray)plans.get("plan");
@@ -216,7 +227,7 @@ public class ElvantoImportDialog extends Stage {
 
                     TreeItem<String> planItem = new TreeItem<String>(date + " " + serviceName);
                     parentItem.getChildren().add(planItem);
-                    ElvantoPlanDialog planDialog = new ElvantoPlanDialog(ElvantoImportDialog.this, plan);
+                    ElvantoPlanDialog planDialog = new ElvantoPlanDialog(ElvantoImportDialog.this, plan, filesArray);
                     treeViewItemPlanDialogMap.put(planItem, planDialog);
                 }
             }

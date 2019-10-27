@@ -73,6 +73,7 @@ public class ElvantoPlanDialog extends BorderPane {
     private final ElvantoImportDialog importDialog;
     
     private JSONObject  planJSON;
+    private JSONArray filesArrayJSON;
     
     @FXML private TreeView planView;
     @FXML private ProgressBar totalProgress;
@@ -83,10 +84,11 @@ public class ElvantoPlanDialog extends BorderPane {
     public ElvantoPlanDialog() {
         importDialog = null;
     }
-    
-    public ElvantoPlanDialog(ElvantoImportDialog importDlg, JSONObject plan) {
+
+    public ElvantoPlanDialog(ElvantoImportDialog importDlg, JSONObject plan, JSONArray filesArray) {
         importDialog = importDlg;
         planJSON = plan;
+        filesArrayJSON = filesArray;
               
         try {
             FXMLLoader loader = new FXMLLoader();
@@ -120,11 +122,12 @@ public class ElvantoPlanDialog extends BorderPane {
     @SuppressWarnings("unchecked")
     protected void updateView() {
         LOGGER.log(Level.INFO, "JSON is {0}", planJSON);
-        
+        LOGGER.log(Level.INFO, "JSON files array is {0}", filesArrayJSON);
+
         planView.setShowRoot(false);
         TreeItem<String> rootTreeItem = new TreeItem<>();
         planView.setRoot(rootTreeItem);
-        
+
         JSONObject itemsObj = (JSONObject)planJSON.get("items");
         JSONArray itemArray = (JSONArray)itemsObj.get("item");
         for (Object itemObj : itemArray) {
@@ -178,6 +181,9 @@ public class ElvantoPlanDialog extends BorderPane {
     }
     
     @FXML private void onRefreshAction(ActionEvent event) {
+        TreeItem<String> rootTreeItem = new TreeItem<>();
+        planView.setRoot(rootTreeItem);
+        importDialog.updatePlans();
         updateView();
     }
     
@@ -190,7 +196,7 @@ public class ElvantoPlanDialog extends BorderPane {
         // stop user being able to try to change to another plan and do bad!
         importDialog.enablePlanProgressBars(enable);        
     }
-    
+
     class ImportTask extends Task<Void> {
 
         List<TreeItem<String> > selectedTreeItems;
