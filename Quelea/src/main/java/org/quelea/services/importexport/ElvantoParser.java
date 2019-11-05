@@ -16,6 +16,10 @@
  */
 package org.quelea.services.importexport;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -23,10 +27,14 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javafx.scene.control.ProgressBar;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
@@ -36,6 +44,7 @@ import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.quelea.services.utils.LoggerUtils;
+import org.quelea.services.utils.QueleaProperties;
 
 /**
  *
@@ -148,5 +157,68 @@ public class ElvantoParser {
         JSONObject json = new JSONObject();
         json.put("id", arrangementId);
         return postJson("https://api.elvanto.com/v1/songs/arrangements/getInfo.json", json);
+    }
+
+    // Download file from url to fileName, putting the file into the download directory
+    // if the file exists it wont be downloaded
+    // will give the file a temporary name until the download is fully complete at
+    // which point it will rename to indicate the file is downloaded properly
+    public String downloadFile(String url, String fileName, ProgressBar progressBar, Date lastUpdated) {
+        try {
+            QueleaProperties props = QueleaProperties.get();
+            String fullFileName = FilenameUtils.concat(props.getDownloadPath(), fileName);
+            File file = new File(fullFileName);
+            LOGGER.log(Level.WARNING, "downloadFile " + url + " " + fullFileName);
+            if (file.exists()) {
+                long lastModified = file.lastModified();
+                if (lastUpdated == null || lastUpdated.getTime() <= lastModified) {
+                    return file.getAbsolutePath();
+                }
+
+                // file is going to get overridden as it failed the timestamp check
+                if (!file.delete()) {
+                    // deletion of exiting file failed! just use the existing file then
+                    System.out.println("Couldn't delete existing file: " + fullFileName);
+                    return file.getAbsolutePath();
+                }
+            }
+
+            String partFullFileName = fullFileName + ".part";
+            File partFile = new File(partFullFileName);
+
+            HttpGet httpget = new HttpGet(url);
+            HttpResponse response = httpClient.execute(httpget, httpContext);
+            HttpEntity entity = response.getEntity();
+            if (entity != null) {
+
+                long contentLength = entity.getContentLength();
+
+                InputStream is = entity.getContent();
+                try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(partFile))) {
+                    Long totalBytesRead = 0L;
+
+                    byte buffer[] = new byte[1024 * 1024];
+                    int count;
+                    while ((count = is.read(buffer)) != -1) {
+                        bos.write(buffer, 0, count);
+
+                        totalBytesRead += count;
+                        progressBar.setProgress((double) totalBytesRead / (double) contentLength);
+                    }
+                }
+
+                EntityUtils.consume(entity);
+            }
+
+            boolean success = partFile.renameTo(file);
+            if (success && lastUpdated != null) {
+                file.setLastModified(lastUpdated.getTime()); // set file timestamp to same as on PCO
+            }
+            return file.getAbsolutePath();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error", e);
+        }
+
+        return "";
     }
 }
