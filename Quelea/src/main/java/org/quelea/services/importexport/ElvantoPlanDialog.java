@@ -21,7 +21,6 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.Level;
@@ -40,7 +39,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.concurrent.Task;
 import javafx.scene.layout.VBox;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.quelea.data.ThemeDTO;
@@ -95,8 +93,38 @@ public class ElvantoPlanDialog extends BorderPane {
         }
     }
 
+    private class AttachedPlanFileObj extends JSONObject {
+        PlanType plantype;
+        MediaType mediatype;
+
+        public AttachedPlanFileObj(JSONObject jsonObject) {
+            super();
+        }
+    }
+
+    private class AttachedPlanSongObj extends AttachedPlanFileObj {
+        boolean html;
+        String id;
+        String title;
+        String type;
+        String content;
+/*
+        JSON object layout:
+            item.put("html", 0);
+            item.put("id", "0");
+            item.put("title", title);
+            item.put("content", title);
+            item.put("plantype", PlanType.MEDIA);
+            item.put("mediatype", mediaType);
+
+* */
+        public AttachedPlanSongObj(PlanType plantype, MediaType mediatype) {
+            super(plantype, mediatype);
+        }
+    }
+
     private static final Logger LOGGER = LoggerUtils.getLogger();
-    private final Map<TreeItem<String>, JSONObject> treeViewItemMap = new HashMap<>();
+    private final Map<TreeItem<String>, AttachedPlanFileObj> treeViewItemMap = new HashMap<>();
     private final ElvantoImportDialog importDialog;
     
     private JSONObject  planJSON;
@@ -127,7 +155,7 @@ public class ElvantoPlanDialog extends BorderPane {
             enablePlanProgressBars(false);
             LOGGER.log(Level.INFO, "Initialised dialog, updating view");
             updateView();
-        
+
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error", e);
         }       
@@ -182,7 +210,7 @@ public class ElvantoPlanDialog extends BorderPane {
     }
 
     protected PlanType getItemPlanType(JSONObject item) {
-        // valid song object is a song
+        // determine from JSON obj if object is a song
         try {
             JSONObject song = (JSONObject)item.get("song");
             return PlanType.SONG;
@@ -192,7 +220,7 @@ public class ElvantoPlanDialog extends BorderPane {
 
         return PlanType.UNKNOWN;
     }
-            
+
     @SuppressWarnings("unchecked")
     protected void updateView() {
         LOGGER.log(Level.INFO, "JSON is {0}", planJSON);
@@ -236,6 +264,7 @@ public class ElvantoPlanDialog extends BorderPane {
         if (filesArrayJSON != null)
         {
             for (Object filesObj : filesArrayJSON) {
+                /* At this point, JSONObject only exists, and AttachedPlanFileObj are to be created */
                 JSONObject item = (JSONObject)filesObj;
 
                 AttachedFileType planType = getItemFileType(item);
@@ -274,11 +303,13 @@ public class ElvantoPlanDialog extends BorderPane {
         catch (NullPointerException e)
         {
         }
-        item.put("plantype", PlanType.MEDIA);
-        item.put("mediatype", mediaType);
+        //AttachedPlanFileObj fileObj = new AttachedPlanFileObj(PlanType.MEDIA, mediaType);
+        AttachedPlanFileObj fileObj = (AttachedPlanFileObj) item.clone();
+        fileObj.plantype = PlanType.MEDIA;
+        fileObj.mediatype = mediaType;
         TreeItem<String> treeItem = new TreeItem<>(title);
         parentTreeItem.getChildren().add(treeItem);
-        treeViewItemMap.put(treeItem, item);
+        treeViewItemMap.put(treeItem, fileObj);
     }
 
     protected void addToView_PlanLyrics(JSONObject item, TreeItem<String> parentTreeItem, MediaType mediaType) {
@@ -291,11 +322,12 @@ public class ElvantoPlanDialog extends BorderPane {
         catch (NullPointerException e)
         {
         }
-        item.put("plantype", PlanType.MEDIA);
-        item.put("mediatype", mediaType);
+        AttachedPlanFileObj fileObj = new AttachedPlanFileObj(item);
+        fileObj.plantype = PlanType.MEDIA;
+        fileObj.mediatype = mediaType;
         TreeItem<String> treeItem = new TreeItem<>(title);
         parentTreeItem.getChildren().add(treeItem);
-        treeViewItemMap.put(treeItem, item);
+        treeViewItemMap.put(treeItem, fileObj);
     }
 
     protected void addToView_CustomSlides(JSONObject item, TreeItem<String> parentTreeItem, MediaType mediaType) {
@@ -308,31 +340,30 @@ public class ElvantoPlanDialog extends BorderPane {
         catch (NullPointerException e)
         {
         }
-        item.put("plantype", PlanType.MEDIA);
-        item.put("mediatype", mediaType);
+        AttachedPlanFileObj fileObj = (AttachedPlanFileObj) item.clone();
+        fileObj.plantype = PlanType.MEDIA;
+        fileObj.mediatype = mediaType;
         TreeItem<String> treeItem = new TreeItem<>(title);
         parentTreeItem.getChildren().add(treeItem);
-        treeViewItemMap.put(treeItem, item);
+        treeViewItemMap.put(treeItem, fileObj);
     }
 
-    protected void addToView_PlanSong(JSONObject item, TreeItem<String> parentTreeItem) {
+    protected void addToView_PlanSong(JSONObject jsonItem, TreeItem<String> parentTreeItem) {
         try {
-            JSONObject song = (JSONObject)item.get("song");
+            JSONObject song = (JSONObject)jsonItem.get("song");
             String title = "Song: " + (String)song.get("title");
+            AttachedPlanSongObj item = new AttachedPlanSongObj(PlanType.SONG, MediaType.UNKNOWN);
             /* Let song object look like any other attached object */
-            item.put("html", 0);
-            item.put("id", "0");
-            item.put("title", title);
-            item.put("plantype", PlanType.SONG);
-            item.put("mediatype", MediaType.UNKNOWN);
-            item.put("type", "Song");
-            item.put("content", title);
+            item.html = false;
+            item.id = "0";
+            item.title = title;
+            item.content = title;
             TreeItem<String> treeItem = new TreeItem<>(title);
             parentTreeItem.getChildren().add(treeItem);
             treeViewItemMap.put(treeItem, item);
         }
         catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Item " + item + " Error ", e);
+            LOGGER.log(Level.WARNING, "Item " + jsonItem + " Error ", e);
         }
     }
 
@@ -440,7 +471,6 @@ public class ElvantoPlanDialog extends BorderPane {
             item.put("html", 0);
             item.put("id", "0");
             item.put("title", title);
-            item.put("type", "Song");
             item.put("content", title);
             item.put("plantype", PlanType.MEDIA);
             item.put("mediatype", mediaType);
