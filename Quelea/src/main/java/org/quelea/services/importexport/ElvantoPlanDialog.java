@@ -97,17 +97,14 @@ public class ElvantoPlanDialog extends BorderPane {
         PlanType plantype;
         MediaType mediatype;
 
-        public AttachedPlanFileObj(JSONObject jsonObject) {
+        public AttachedPlanFileObj(PlanType plantype, MediaType mediatype) {
             super();
+            this.plantype = plantype;
+            this.mediatype = mediatype;
         }
     }
 
-    private class AttachedPlanSongObj extends AttachedPlanFileObj {
-        boolean html;
-        String id;
-        String title;
-        String type;
-        String content;
+    private class AttachedPlanDetails extends AttachedPlanFileObj {
 /*
         JSON object layout:
             item.put("html", 0);
@@ -118,7 +115,12 @@ public class ElvantoPlanDialog extends BorderPane {
             item.put("mediatype", mediaType);
 
 * */
-        public AttachedPlanSongObj(PlanType plantype, MediaType mediatype) {
+        boolean html = false;
+        String id = "";
+        String title = "";
+        String content = "";
+
+        public AttachedPlanDetails(PlanType plantype, MediaType mediatype) {
             super(plantype, mediatype);
         }
     }
@@ -295,75 +297,83 @@ public class ElvantoPlanDialog extends BorderPane {
     
     protected void addToView_PlanMedia(JSONObject item, TreeItem<String> parentTreeItem, MediaType mediaType) {
         String title = mediaType.toString().toLowerCase() + " ";
+        String content = "";
         try {
             title = title + (String)item.get("title");
-            String content = (String)item.get("content");
-            title = title + " (" + content.substring(content.lastIndexOf(".")) + ") ";
+            content = (String)item.get("content");
+            //title = title + " (" + content.substring(content.lastIndexOf(".")) + ") ";
         }
         catch (NullPointerException e)
         {
         }
-        //AttachedPlanFileObj fileObj = new AttachedPlanFileObj(PlanType.MEDIA, mediaType);
-        AttachedPlanFileObj fileObj = (AttachedPlanFileObj) item.clone();
-        fileObj.plantype = PlanType.MEDIA;
-        fileObj.mediatype = mediaType;
+        AttachedPlanDetails planItem = new AttachedPlanDetails(PlanType.MEDIA, mediaType);
+        planItem.html = (Long) (item.get("html")) > 0 ? true : false;
+        planItem.id = (String) item.get("id");
+        planItem.title = title;
+        planItem.content = content;
         TreeItem<String> treeItem = new TreeItem<>(title);
         parentTreeItem.getChildren().add(treeItem);
-        treeViewItemMap.put(treeItem, fileObj);
+        treeViewItemMap.put(treeItem, planItem);
     }
 
     protected void addToView_PlanLyrics(JSONObject item, TreeItem<String> parentTreeItem, MediaType mediaType) {
         String title = mediaType.toString().toLowerCase() + " ";
+        String content = "";
         try {
             title = title + (String)item.get("title");
-            String content = (String)item.get("content");
-            title = title + " (" + content.substring(content.lastIndexOf(".")) + ") ";
+            content = (String)item.get("content");
+            //title = title + " (" + content.substring(content.lastIndexOf(".")) + ") ";
         }
         catch (NullPointerException e)
         {
         }
-        AttachedPlanFileObj fileObj = new AttachedPlanFileObj(item);
-        fileObj.plantype = PlanType.MEDIA;
-        fileObj.mediatype = mediaType;
+        AttachedPlanDetails planItem = new AttachedPlanDetails(PlanType.MEDIA, mediaType);
+        planItem.html = (Long) (item.get("html")) > 0 ? true : false;
+        planItem.id = (String) item.get("id");
+        planItem.title = title;
+        planItem.content = content;
         TreeItem<String> treeItem = new TreeItem<>(title);
         parentTreeItem.getChildren().add(treeItem);
-        treeViewItemMap.put(treeItem, fileObj);
+        treeViewItemMap.put(treeItem, planItem);
     }
 
     protected void addToView_CustomSlides(JSONObject item, TreeItem<String> parentTreeItem, MediaType mediaType) {
         String title = mediaType.toString().toLowerCase() + " ";
+        String content = "";
         try {
             title = title + (String)item.get("title");
-            String content = (String)item.get("content");
-            title = title + " (" + content.substring(content.lastIndexOf(".")) + ") ";
+            content = (String)item.get("content");
+            //title = title + " (" + content.substring(content.lastIndexOf(".")) + ") ";
         }
         catch (NullPointerException e)
         {
         }
-        AttachedPlanFileObj fileObj = (AttachedPlanFileObj) item.clone();
-        fileObj.plantype = PlanType.MEDIA;
-        fileObj.mediatype = mediaType;
+        AttachedPlanDetails planItem = new AttachedPlanDetails(PlanType.MEDIA, mediaType);
+        planItem.html = (Long) (item.get("html")) > 0 ? true : false;
+        planItem.id = (String) item.get("id");
+        planItem.title = title;
+        planItem.content = content;
         TreeItem<String> treeItem = new TreeItem<>(title);
         parentTreeItem.getChildren().add(treeItem);
-        treeViewItemMap.put(treeItem, fileObj);
+        treeViewItemMap.put(treeItem, planItem);
     }
 
-    protected void addToView_PlanSong(JSONObject jsonItem, TreeItem<String> parentTreeItem) {
+    protected void addToView_PlanSong(JSONObject item, TreeItem<String> parentTreeItem) {
         try {
-            JSONObject song = (JSONObject)jsonItem.get("song");
+            JSONObject song = (JSONObject)item.get("song");
             String title = "Song: " + (String)song.get("title");
-            AttachedPlanSongObj item = new AttachedPlanSongObj(PlanType.SONG, MediaType.UNKNOWN);
             /* Let song object look like any other attached object */
-            item.html = false;
-            item.id = "0";
-            item.title = title;
-            item.content = title;
+            AttachedPlanDetails songItem = new AttachedPlanDetails(PlanType.SONG, MediaType.UNKNOWN);
+            songItem.html = false;
+            songItem.id = "0";
+            songItem.title = title;
+            songItem.content = title;
             TreeItem<String> treeItem = new TreeItem<>(title);
             parentTreeItem.getChildren().add(treeItem);
-            treeViewItemMap.put(treeItem, item);
+            treeViewItemMap.put(treeItem, songItem);
         }
         catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Item " + jsonItem + " Error ", e);
+            LOGGER.log(Level.WARNING, "Item " + item + " Error ", e);
         }
     }
 
@@ -378,7 +388,8 @@ public class ElvantoPlanDialog extends BorderPane {
         List<TreeItem<String> > selectedTreeItems = (List<TreeItem<String> >)planView.getSelectionModel().getSelectedItems();
         importSelected(selectedTreeItems);
     }
-    
+
+    @SuppressWarnings("unchecked")
     @FXML private void onRefreshAction(ActionEvent event) {
         TreeItem<String> rootTreeItem = new TreeItem<>();
         planView.setRoot(rootTreeItem);
@@ -412,15 +423,15 @@ public class ElvantoPlanDialog extends BorderPane {
 
             int index = 0;
             for (TreeItem<String> treeItem : selectedTreeItems) {
-                JSONObject item = treeViewItemMap.get(treeItem);
+                AttachedPlanFileObj item = treeViewItemMap.get(treeItem);
 
                 itemProgress.setProgress(0);
 
-                PlanType planType = (PlanType)item.get("plantype");
+                PlanType planType = item.plantype;
                 switch (planType)
                 {
                     case MEDIA:
-                        prepare_PlanMedia(item, treeItem);
+                        prepare_PlanMedia((AttachedPlanDetails)item, treeItem);
                         break;
 
                     case SONG:
@@ -445,48 +456,22 @@ public class ElvantoPlanDialog extends BorderPane {
             super.succeeded();
         }
         
-        protected void prepare_PlanMedia(JSONObject item, TreeItem<String> treeItem) {
-/*
-            JSONArray itemMediaJSON = (JSONArray)item.get("plan_item_medias");
-            if (itemMediaJSON.size() <= 0) {
-                return;
-            }
-
-            // process each media item in the item media
-            for (int i = 0; i < itemMediaJSON.size(); ++i)
-            {
-                Long mediaId = (long)((JSONObject)itemMediaJSON.get(i)).get("media_id");
-                JSONObject mediaJSON = importDialog.getParser().media(mediaId);
-                prepare_PlanMedia_fromMediaJSON(mediaJSON);
-            }
- */
-            //prepare_CustomSlides(item, treeItem);
-            prepare_PlanMedia_fromMediaJSON(item);
-
-        }
-
-        protected void prepare_PlanMedia_fromMediaJSON(JSONObject mediaJSON) {
-/*
-        JSON object layout:
-            item.put("html", 0);
-            item.put("id", "0");
-            item.put("title", title);
-            item.put("content", title);
-            item.put("plantype", PlanType.MEDIA);
-            item.put("mediatype", mediaType);
-
-* */
-            MediaType mediatype = (MediaType)mediaJSON.get("mediatype");
-            // a file to download then put into Quela
-            String url = (String)mediaJSON.get("content");
+        protected void prepare_PlanMedia(AttachedPlanDetails item, TreeItem<String> treeItem) {
+            MediaType mediatype = item.mediatype;
+            // a file to download then put into Quelea
+            String url = (String)item.content;
 
             String fileName = "";
             String titleName = " ";
             try {
                 fileName = mediatype.toString() + "-";
-                titleName = (String)mediaJSON.get("title");
-                String idName = (String)mediaJSON.get("id");
+                titleName = item.title;
+                String idName = item.id;
                 String extName = url.substring(url.lastIndexOf("."));
+                if (extName.indexOf("/") > 0)
+                {
+                    extName = extName.substring(0, extName.indexOf("/"));
+                }
                 fileName += titleName + "-" + idName + extName;
             }
             catch (Exception e)
@@ -553,6 +538,7 @@ public class ElvantoPlanDialog extends BorderPane {
 
                     default:
                     case UNKNOWN:
+                        LOGGER.log(Level.WARNING, "Unknown type of item " + fileName);
                         break;
                 }
             }
@@ -566,7 +552,7 @@ public class ElvantoPlanDialog extends BorderPane {
             }
         }
         
-        protected void prepare_PlanSong(JSONObject item, TreeItem<String> treeItem) {
+        protected void prepare_PlanSong(AttachedPlanFileObj item, TreeItem<String> treeItem) {
             JSONObject songJSON = (JSONObject)item.get("song");
             String title = (String)songJSON.get("title");
             String author = (String)songJSON.get("artist");
@@ -575,7 +561,6 @@ public class ElvantoPlanDialog extends BorderPane {
             JSONObject response = importDialog.getParser().arrangement(arrangementId);
             JSONObject arrangement = (JSONObject)((JSONArray)response.get("arrangement")).get(0);
             String lyrics = cleanLyrics((String)arrangement.get("lyrics"));
-            //JSONArray sequence = (JSONArray)arrangement.get("sequence");
 
             String ccli = (String)songJSON.get("ccli_number");
             String copyright = (String)arrangement.get("copyright");
