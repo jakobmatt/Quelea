@@ -365,9 +365,10 @@ public class ElvantoPlanDialog extends BorderPane {
             /* Let song object look like any other attached object */
             AttachedPlanDetails songItem = new AttachedPlanDetails(PlanType.SONG, MediaType.UNKNOWN);
             songItem.html = false;
-            songItem.id = "0";
+            songItem.id = (String)song.get("id");
             songItem.title = title;
             songItem.content = title;
+            songItem.put("song", song); //put JSONObject song back on songItem to access it later
             TreeItem<String> treeItem = new TreeItem<>(title);
             parentTreeItem.getChildren().add(treeItem);
             treeViewItemMap.put(treeItem, songItem);
@@ -554,24 +555,30 @@ public class ElvantoPlanDialog extends BorderPane {
         
         protected void prepare_PlanSong(AttachedPlanFileObj item, TreeItem<String> treeItem) {
             JSONObject songJSON = (JSONObject)item.get("song");
-            String title = (String)songJSON.get("title");
-            String author = (String)songJSON.get("artist");
+            if (songJSON != null)
+            {
+                String title = (String)songJSON.get("title");
+                String author = (String)songJSON.get("artist");
 
-            String arrangementId = (String)((JSONObject)songJSON.get("arrangement")).get("id");
-            JSONObject response = importDialog.getParser().arrangement(arrangementId);
-            JSONObject arrangement = (JSONObject)((JSONArray)response.get("arrangement")).get(0);
-            String lyrics = cleanLyrics((String)arrangement.get("lyrics"));
+                String arrangementId = (String)((JSONObject)songJSON.get("arrangement")).get("id");
+                JSONObject response = importDialog.getParser().arrangement(arrangementId);
+                if (response.get("status").equals("ok"))
+                {
+                    JSONObject arrangement = (JSONObject)((JSONArray)response.get("arrangement")).get(0);
+                    String lyrics = cleanLyrics((String)arrangement.get("lyrics"));
+                    //JSONArray sequence = (JSONArray)arrangement.get("sequence");
 
-            String ccli = (String)songJSON.get("ccli_number");
-            String copyright = (String)arrangement.get("copyright");
+                    String ccli = (String)songJSON.get("ccli_number");
+                    String copyright = (String)arrangement.get("copyright");
 
-            SongDisplayable song = new SongDisplayable(title, author);
-            song.setLyrics(lyrics);
-            song.setCopyright(copyright);
-            song.setCcli(ccli);     
-
-            Utils.updateSongInBackground(song, true, false);
-            importItems.add(song);
+                    SongDisplayable song = new SongDisplayable(title, author);
+                    song.setLyrics(lyrics);
+                    song.setCopyright(copyright);
+                    song.setCcli(ccli);
+                    Utils.updateSongInBackground(song, true, false);
+                    importItems.add(song);
+                }
+            }
         }
 
         protected void prepare_CustomSlides(JSONObject item, TreeItem<String> treeItem) {
