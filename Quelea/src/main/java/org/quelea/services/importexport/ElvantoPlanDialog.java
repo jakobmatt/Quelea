@@ -46,6 +46,7 @@ import org.quelea.data.displayable.*;
 import org.quelea.services.languages.LabelGrabber;
 import org.quelea.services.utils.FileFilters;
 import org.quelea.services.utils.LoggerUtils;
+import org.quelea.services.utils.QueleaProperties;
 import org.quelea.services.utils.Utils;
 import org.quelea.windows.main.QueleaApp;
 
@@ -119,6 +120,7 @@ public class ElvantoPlanDialog extends BorderPane {
         String id = "";
         String title = "";
         String content = "";
+        JSONObject jsonSong = null;
 
         public AttachedPlanDetails(PlanType plantype, MediaType mediatype) {
             super(plantype, mediatype);
@@ -368,7 +370,8 @@ public class ElvantoPlanDialog extends BorderPane {
             songItem.id = (String)song.get("id");
             songItem.title = title;
             songItem.content = title;
-            songItem.put("song", song); //put JSONObject song back on songItem to access it later
+            //put JSONObject song back on songItem to access it when song is fetched in prepare_PlanSong
+            songItem.jsonSong = song;
             TreeItem<String> treeItem = new TreeItem<>(title);
             parentTreeItem.getChildren().add(treeItem);
             treeViewItemMap.put(treeItem, songItem);
@@ -554,30 +557,42 @@ public class ElvantoPlanDialog extends BorderPane {
         }
         
         protected void prepare_PlanSong(AttachedPlanFileObj item, TreeItem<String> treeItem) {
-            JSONObject songJSON = (JSONObject)item.get("song");
-            if (songJSON != null)
+            if (item instanceof AttachedPlanDetails)
             {
-                String title = (String)songJSON.get("title");
-                String author = (String)songJSON.get("artist");
-
-                String arrangementId = (String)((JSONObject)songJSON.get("arrangement")).get("id");
-                JSONObject response = importDialog.getParser().arrangement(arrangementId);
-                if (response.get("status").equals("ok"))
+                JSONObject songJSON = ((AttachedPlanDetails)item).jsonSong;
+                if (songJSON != null)
                 {
-                    JSONObject arrangement = (JSONObject)((JSONArray)response.get("arrangement")).get(0);
-                    String lyrics = cleanLyrics((String)arrangement.get("lyrics"));
-                    //JSONArray sequence = (JSONArray)arrangement.get("sequence");
+                    String title = (String)songJSON.get("title");
+                    String author = (String)songJSON.get("artist");
 
-                    String ccli = (String)songJSON.get("ccli_number");
-                    String copyright = (String)arrangement.get("copyright");
+                    String arrangementId = (String)((JSONObject)songJSON.get("arrangement")).get("id");
+                    JSONObject response = importDialog.getParser().arrangement(arrangementId);
+                    if (response.get("status").equals("ok"))
+                    {
+                        JSONObject arrangement = (JSONObject)((JSONArray)response.get("arrangement")).get(0);
+                        LOGGER.log(Level.INFO, "Arrangement: {0}", arrangement);
+                        String lyrics = cleanLyrics((String)arrangement.get("lyrics"), title);
+                        //JSONArray sequence = (JSONArray)arrangement.get("sequence");
 
-                    SongDisplayable song = new SongDisplayable(title, author);
-                    song.setLyrics(lyrics);
-                    song.setCopyright(copyright);
-                    song.setCcli(ccli);
-                    Utils.updateSongInBackground(song, true, false);
-                    importItems.add(song);
+                        String ccli = (String)songJSON.get("ccli_number");
+                        String copyright = (String)arrangement.get("copyright");
+
+                        SongDisplayable song = new SongDisplayable(title, author);
+                        song.setLyrics(lyrics);
+                        song.setCopyright(copyright);
+                        song.setCcli(ccli);
+                        Utils.updateSongInBackground(song, true, false);
+                        importItems.add(song);
+                    }
                 }
+                else
+                {
+                    LOGGER.log(Level.WARNING, "prepare_PlanSong: Expected songJSON value: {0}", item);
+                }
+            }
+            else
+            {
+                LOGGER.log(Level.WARNING, "prepare_PlanSong: Expected song: {0}", item);
             }
         }
 
@@ -605,15 +620,21 @@ public class ElvantoPlanDialog extends BorderPane {
             slides.setLyrics(joinedSlidesText);
             importItems.add(slides);
         }
-    };
-    
+    }
+
     // This MUST be run in the main thread
     // This adds the prepared displayable items into Quelea
     private void importTaskSucceeded(ImportTask importTask) {
         for (Displayable displayable : importTask.importItems) {
             QueleaApp.get().getMainWindow().getMainPanel().getSchedulePanel().getScheduleList().add(displayable);
+            if (displayable instanceof SongDisplayable)
+            {
+                SongDisplayable song = (SongDisplayable)displayable;
+                song.matchID();
+                QueleaApp.get().getMainWindow().getMainPanel().getSchedulePanel().getScheduleList().refreshSong(song);
+            }
         }
-        
+
         QueleaApp.get().getMainWindow().getMainPanel().getPreviewPanel().refresh();
     }
     
@@ -653,7 +674,7 @@ public class ElvantoPlanDialog extends BorderPane {
             
     // clean up things like (C2) transform it to (Chorus 2)
     // so Quelea can handle it
-    protected String cleanLyrics(String lyrics) {
+    protected String cleanLyrics(String lyrics, String songTitle) {
         Pattern titleExp = Pattern.compile("^\\(?(Verse|Chorus|Pre-Chorus|Pre Chorus|Tag|Outro|Bridge|Misc|Interlude|Ending)\\)?\\s?(\\d?)|\\(?(\\S)(\\d+)\\)?$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
         
         // allows us to expand abbreviations to full name (ensure Key value is all uppercase)
@@ -692,7 +713,25 @@ public class ElvantoPlanDialog extends BorderPane {
         Pattern removeChoordsExp = Pattern.compile("(?m)(^| |\\[|\\b)([A-G](##?|bb?)?((sus|maj|min|aug|dim)\\d?)?(\\/[A-G](##?|bb?)?)?)(\\]| (?!\\w)|$)");
         Matcher m2 = removeChoordsExp.matcher(lyrics);
         lyrics = m2.replaceAll("");
-        
+
+        //remove lines with only spaces
+        String[] parapraphs = lyrics.split(System.lineSeparator() + System.lineSeparator());
+        lyrics = "";
+        for (String parapraph: parapraphs)
+        {
+            String[] lines = parapraph.split(System.lineSeparator());
+            for (String line: lines)
+            {
+                if (!line.isBlank())
+                {
+                    lyrics += line + System.lineSeparator();
+                }
+            }
+            //keep paragraph break (double line break, but one has already been added)
+            lyrics += System.lineSeparator();
+
+        }
+
         int lastMatchEnd = -1;
         String lastTitle = "";
         Matcher match = titleExp.matcher(lyrics);        
@@ -723,7 +762,7 @@ public class ElvantoPlanDialog extends BorderPane {
 					// if the first title is malformed, at least this will pull down the text for the user to be able to fix it up
 					if (matchStart != 0) {
 						String text = lyrics.substring(0, matchStart).trim();
-						titleTextBlockList.add(new TitleTextBlock("Unknown", text));
+						titleTextBlockList.add(new TitleTextBlock(songTitle, text));
 					}
 				}
                 
@@ -743,7 +782,7 @@ public class ElvantoPlanDialog extends BorderPane {
 		else {
 			// the whole song is malformed, at least this will pull down the text for the user to be able to fix it up
 			String text = lyrics;
-			titleTextBlockList.add(new TitleTextBlock("Unknown", text));
+			titleTextBlockList.add(new TitleTextBlock(songTitle, text));
 		}
         
         // now the song has been divided into titled text blocks, time to bring it together nicely
@@ -759,8 +798,15 @@ public class ElvantoPlanDialog extends BorderPane {
             if (i != 0) {
                 cleanedLyrics += System.lineSeparator() + System.lineSeparator();
             }
-            
-            cleanedLyrics += "(" + titleTextBlock.title + ")" + System.lineSeparator() + titleTextBlock.text;
+
+            if (titleTextBlock.title.isEmpty())
+            {
+                cleanedLyrics += titleTextBlock.text;
+            }
+            else
+            {
+                cleanedLyrics += "(" + titleTextBlock.title + ")" + System.lineSeparator() + titleTextBlock.text;
+            }
          }
 
         return cleanedLyrics;
